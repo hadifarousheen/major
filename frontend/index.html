@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Animal Classifier from Video</title>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    background: #f0f8f0;
+    margin: 0;
+    padding: 40px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .container {
+    background: white;
+    padding: 30px 50px;
+    border-radius: 10px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+    width: 400px;
+    text-align: center;
+  }
+  h2 {
+    color: #3a7d44;
+  }
+  input[type="file"] {
+    margin: 20px 0;
+  }
+  #uploadBtn {
+    background: #4caf50;
+    border: none;
+    color: white;
+    padding: 12px 30px;
+    font-size: 16px;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+  #uploadBtn:hover {
+    background: #3b6f3b;
+  }
+  #loading {
+    margin-top: 15px;
+    color: #555;
+  }
+  #results {
+    margin-top: 30px;
+    text-align: left;
+  }
+  .animal {
+    margin-bottom: 30px;
+  }
+  .animal h3 {
+    color: #2e603d;
+    margin-bottom: 10px;
+  }
+  .animal img {
+    max-width: 120px;
+    margin: 6px;
+    border-radius: 8px;
+    border: 1px solid #ddd;
+  }
+  a {
+    color: #2e603d;
+  }
+</style>
+</head>
+<body>
+  <div class="container">
+    <h2>Animal Classifier from Video</h2>
+    <input type="file" id="videoInput" accept="video/*" />
+    <br />
+    <button id="uploadBtn" type="button">Upload Video</button>
+    <div id="loading" style="display:none;">Processing video, please wait...</div>
+    <div id="results"></div>
+  </div>
+
+<script>
+  document.getElementById('uploadBtn').addEventListener('click', async () => {
+    const videoInput = document.getElementById('videoInput');
+    if (!videoInput.files.length) {
+      alert('Please choose a video file.');
+      return;
+    }
+
+    const loading = document.getElementById('loading');
+    const resultsDiv = document.getElementById('results');
+    resultsDiv.innerHTML = '';
+    loading.style.display = 'block';
+
+    const formData = new FormData();
+    formData.append('video', videoInput.files[0]);
+
+    try {
+      const response = await fetch('http://127.0.0.1:5000/classify', {
+        method: 'POST',
+        body: formData,
+      });
+      const data = await response.json();
+      loading.style.display = 'none';
+
+      if (!data.animals || data.animals.length === 0) {
+        resultsDiv.innerHTML = '<p>No animals detected in the video.</p>';
+        return;
+      }
+
+      data.animals.forEach(animal => {
+        const div = document.createElement('div');
+        div.className = 'animal';
+        div.innerHTML = `<h3>${animal.name}</h3>`;
+        animal.images.forEach(imgUrl => {
+          const img = document.createElement('img');
+          img.src = `http://127.0.0.1:5000${imgUrl}`;
+          div.appendChild(img);
+        });
+        resultsDiv.appendChild(div);
+      });
+
+      const loc = data.location;
+      if (loc.latitude && loc.longitude) {
+        const locLink = document.createElement('p');
+        locLink.innerHTML = `Location: <a href="https://www.google.com/maps?q=${loc.latitude},${loc.longitude}" target="_blank">View on Map</a>`;
+        resultsDiv.appendChild(locLink);
+      }
+    } catch (err) {
+      loading.style.display = 'none';
+      resultsDiv.innerHTML = '<p>Error uploading or processing video.</p>';
+      console.error(err);
+    }
+  });
+</script>
+</body>
+</html>
